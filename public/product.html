@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Product — Fusion Star</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    .product-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: start; padding: 40px 0; }
+    .product-images .main-img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius-lg); background: var(--bg-card2); }
+    .product-info .category-tag { font-size: 0.8rem; font-weight: 600; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+    .product-info h1 { font-size: clamp(1.5rem, 3vw, 2.2rem); margin-bottom: 16px; }
+    .product-price-wrap { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+    .product-price { font-size: 2rem; font-weight: 800; }
+    .product-price-old { font-size: 1.1rem; color: var(--text-dim); text-decoration: line-through; }
+    .save-tag { background: var(--danger); color: white; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+    .product-rating { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+    .stars-row { display: flex; gap: 3px; }
+    .stars-row .star { font-size: 1rem; color: var(--warning); }
+    .product-desc { color: var(--text-muted); line-height: 1.8; margin-bottom: 28px; }
+    .stock-info { margin-bottom: 24px; }
+    .in-stock { color: var(--success); font-weight: 600; }
+    .out-of-stock { color: var(--danger); font-weight: 600; }
+    .qty-row { display: flex; align-items: center; gap: 20px; margin-bottom: 24px; }
+    .product-actions { display: flex; gap: 12px; }
+    .product-actions .btn { flex: 1; }
+    @media (max-width: 768px) { .product-detail { grid-template-columns: 1fr; gap: 32px; } }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="container">
+      <a href="/" class="nav-logo">✦ Fusion Star</a>
+      <div class="nav-links">
+        <a href="/" class="nav-link">Shop</a>
+        <a href="/orders.html" class="nav-link">My Orders</a>
+        <a href="/admin/" class="nav-link" id="nav-admin" style="display:none">Admin</a>
+      </div>
+      <div class="nav-actions">
+        <a href="/cart.html" class="cart-btn" id="cart-btn">🛒 Cart <span class="cart-count" id="cart-count" style="display:none">0</span></a>
+        <div id="nav-auth-area"></div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-content">
+    <div class="container">
+      <div id="product-detail-container">
+        <div class="loading-overlay"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    const productId = new URLSearchParams(window.location.search).get('id');
+    if (!productId) window.location.href = '/';
+
+    let selectedQty = 1;
+
+    async function loadProduct() {
+      const data = await apiFetch(`/api/products/${productId}`);
+      if (!data.success) { window.location.href = '/'; return; }
+      const p = data.product;
+      document.title = `${p.name} — Fusion Star`;
+
+      const savings = p.originalPrice > p.price ? Math.round((1 - p.price / p.originalPrice) * 100) : 0;
+      const displayPrice = p.price;
+      const stars = '★'.repeat(Math.round(p.rating || 0)) + '☆'.repeat(5 - Math.round(p.rating || 0));
+      const img = p.images[0]?.url || 'https://via.placeholder.com/600x600?text=No+Image';
+
+      document.getElementById('product-detail-container').innerHTML = `
+        <a href="/" style="color:var(--text-muted);font-size:.9rem;display:inline-block;margin-bottom:20px">← Back to Shop</a>
+        <div class="product-detail">
+          <div class="product-images">
+            <img class="main-img" src="${img}" alt="${p.name}" />
+          </div>
+          <div class="product-info">
+            <div class="category-tag">${p.category}</div>
+            <h1>${p.name}</h1>
+            <div class="product-rating">
+              <div class="stars-row">${[...stars].map(s=>`<span class="star">${s}</span>`).join('')}</div>
+              <span style="color:var(--text-muted);font-size:.9rem">${p.numReviews} reviews</span>
+            </div>
+            <div class="product-price-wrap">
+              <span class="product-price">₹${displayPrice.toFixed(2)}</span>
+              ${p.originalPrice > p.price ? `<span class="product-price-old">₹${p.originalPrice.toFixed(2)}</span><span class="save-tag">Save ${savings}%</span>` : ''}
+            </div>
+            <p class="product-desc">${p.description}</p>
+            <div class="stock-info">
+              ${p.stock > 0
+                ? `<span class="in-stock">✓ In Stock</span> <span style="color:var(--text-muted);font-size:.9rem;margin-left:8px">${p.stock} available</span>`
+                : `<span class="out-of-stock">✗ Out of Stock</span>`}
+            </div>
+            ${p.stock > 0 ? `
+            <div class="qty-row">
+              <span style="font-weight:600;color:var(--text-muted);font-size:.9rem">Quantity</span>
+              <div style="display:flex;align-items:center;gap:12px">
+                <button class="qty-btn" onclick="changeQty(-1)">−</button>
+                <span class="qty-value" id="qty-display">1</span>
+                <button class="qty-btn" onclick="changeQty(1)">+</button>
+              </div>
+              <span style="font-size:.85rem;color:var(--text-dim)">max ${p.stock}</span>
+            </div>
+            <div class="product-actions">
+              <button class="btn btn-primary btn-lg" onclick="addToCart('${p._id}')">Add to Cart</button>
+              <a href="/cart.html" class="btn btn-ghost btn-lg">View Cart</a>
+            </div>
+            ` : `<button class="btn btn-ghost btn-lg" disabled>Out of Stock</button>`}
+          </div>
+        </div>
+      `;
+      window._maxStock = p.stock;
+    }
+
+    function changeQty(delta) {
+      selectedQty = Math.max(1, Math.min(window._maxStock || 99, selectedQty + delta));
+      document.getElementById('qty-display').textContent = selectedQty;
+    }
+
+    async function addToCart(id) {
+      if (!localStorage.getItem('token')) { window.location.href = '/login.html'; return; }
+      const res = await apiFetch('/api/cart/add', { method: 'POST', body: JSON.stringify({ productId: id, quantity: selectedQty }) });
+      if (res.success) { showToast('Added to cart!', 'success'); updateCartCount(); }
+      else showToast(res.message || 'Error', 'error');
+    }
+
+    loadProduct();
+  </script>
+</body>
+</html>

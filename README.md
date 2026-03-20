@@ -32,7 +32,7 @@ Ensure you have the following installed on your machine:
 ### 2. Installation
 Clone the repository and install the NPM dependencies:
 ```bash
-git clone https://github.com/AYUSHBHATTACHARYYA/fusion-star-ecommerce.git
+git clone https://github.com/Ayush9874/fusion-star-ecommerce.git
 cd fusion-star-ecommerce
 npm install
 ```
@@ -83,5 +83,3 @@ The application will be accessible at: **`http://localhost:5000`**
 *(See individual backend controllers for thorough request/response signatures).*
 
 ---
-
-*Designed and Developed locally with advanced agentic LLM guidance.*
